@@ -508,7 +508,7 @@ class HyperField extends Field
 
         $view = Craft::$app->getView();
         $oldNamespace = $view->getNamespace();
-        $view->setNamespace($view->namespaceInputName("$this->handle[__HYPER_BLOCK_{$placeholderKey}__]"));
+        $view->setNamespace($view->namespaceInputName($this->handle["__HYPER_BLOCK_{$placeholderKey}__"]));
 
         foreach ($this->getLinkTypes() as $linkType) {
             if (!$linkType->enabled) {
@@ -555,7 +555,7 @@ class HyperField extends Field
 
         $view = Craft::$app->getView();
         $oldNamespace = $view->getNamespace();
-        $view->setNamespace($view->namespaceInputName("$this->handle[__HYPER_BLOCK_{$placeholderKey}__]"));
+        $view->setNamespace($view->namespaceInputName($this->handle["__HYPER_BLOCK_{$placeholderKey}__"]));
 
         // For each Link element, render the fields and convert to an array
         foreach ($links as $key => $link) {
