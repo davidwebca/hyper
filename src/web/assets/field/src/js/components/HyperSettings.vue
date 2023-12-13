@@ -196,7 +196,7 @@ export default {
 
         getParsedLinkTypeHtml(html, id) {
             if (typeof html === 'string') {
-                return html.replace(new RegExp('__LINK_TYPE__', 'g'), id);
+                return html.replace(new RegExp('LinkType', 'g'), id);
             }
 
             return '';

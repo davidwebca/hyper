@@ -4,9 +4,9 @@
 
 {% set isCustom = isCustom ?? false %}
 
-{% namespace 'linkTypes[__LINK_TYPE__]' %}
+{% namespace 'linkTypes[LinkType]' %}
     {{ hiddenInput('type', className(linkType)) }}
-    {{ hiddenInput('handle', '__LINK_TYPE__') }}
+    {{ hiddenInput('handle', 'LinkType') }}
 
     {% if isCustom %}
         {{ hiddenInput('isCustom', true) }}
