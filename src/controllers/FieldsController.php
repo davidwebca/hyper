@@ -86,7 +86,13 @@ class FieldsController extends Controller
         $this->requireCpRequest();
 
         $fieldId = $this->request->getRequiredParam('fieldId');
-        $data = Json::decode($this->request->getRequiredParam('data'));
+
+        if(is_string($this->request->getRequiredParam('data'))) {
+            $data = Json::decode($this->request->getRequiredParam('data'));
+        }else{
+            $data = $this->request->getRequiredParam('data');
+        }
+        
         $field = Craft::$app->getFields()->getFieldById($fieldId);
 
         if (!($field instanceof HyperField)) {
