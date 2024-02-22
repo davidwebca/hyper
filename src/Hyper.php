@@ -7,18 +7,21 @@ use verbb\hyper\fields\HyperField;
 use verbb\hyper\fieldlayoutelements\AriaLabelField;
 use verbb\hyper\fieldlayoutelements\ClassesField;
 use verbb\hyper\fieldlayoutelements\CustomAttributesField;
+use verbb\hyper\fieldlayoutelements\EmbedPreview;
 use verbb\hyper\fieldlayoutelements\LinkField;
 use verbb\hyper\fieldlayoutelements\LinkTextField;
 use verbb\hyper\fieldlayoutelements\LinkTitleField;
 use verbb\hyper\fieldlayoutelements\UrlSuffixField;
 use verbb\hyper\gql\interfaces\LinkInterface as GqlLinkInterface;
 use verbb\hyper\integrations\feedme\fields\Hyper as FeedMeHyperField;
+use verbb\hyper\links\Embed;
 use verbb\hyper\models\Settings;
 use verbb\hyper\variables\HyperVariable;
 
 use Craft;
 use craft\base\Plugin;
 use craft\elements\db\ElementQuery;
+use craft\events\DefineFieldLayoutElementsEvent;
 use craft\events\DefineFieldLayoutFieldsEvent;
 use craft\events\PopulateElementEvent;
 use craft\events\RegisterCacheOptionsEvent;
@@ -38,8 +41,6 @@ use craft\web\UrlManager;
 use craft\web\View;
 
 use yii\base\Event;
-
-use verbb\supertable\services\Service as SuperTableService;
 
 use craft\feedme\events\RegisterFeedMeFieldsEvent;
 use craft\feedme\services\Fields as FeedMeFields;
@@ -136,6 +137,12 @@ class Hyper extends Plugin
                 $event->fields[] = UrlSuffixField::class;
             }
         });
+
+        Event::on(FieldLayout::class, FieldLayout::EVENT_DEFINE_UI_ELEMENTS, function(DefineFieldLayoutElementsEvent $event) {
+            if ($event->sender->type === Embed::class) {
+                $event->elements[] = EmbedPreview::class;
+            }
+        });
     }
 
     private function _registerProjectConfigEventHandlers(): void
@@ -146,19 +153,6 @@ class Hyper extends Plugin
             ->onAdd(ProjectConfig::PATH_FIELDS . '.{uid}', [$this->getService(), 'handleChangedField'])
             ->onUpdate(ProjectConfig::PATH_FIELDS . '.{uid}', [$this->getService(), 'handleChangedField'])
             ->onRemove(ProjectConfig::PATH_FIELDS . '.{uid}', [$this->getService(), 'handleDeletedField']);
-
-        // Special case for some fields like Matrix, that don't emit the change event for nested fields.
-        // $projectConfig
-        //     ->onAdd(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
-        //     ->onUpdate(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
-        //     ->onRemove(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
-
-        if (class_exists(SuperTableService::class)) {
-            $projectConfig
-                ->onAdd(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
-                ->onUpdate(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
-                ->onRemove(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
-        }
     }
 
     private function _registerEventHandlers(): void

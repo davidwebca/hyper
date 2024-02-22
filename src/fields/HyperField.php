@@ -150,57 +150,6 @@ class HyperField extends Field
         ]);
     }
 
-    protected function inputHtml(mixed $value, ?ElementInterface $element, bool $inline): string
-    {
-        $view = Craft::$app->getView();
-        $id = Html::id($this->handle);
-
-        // Ensure that a valid default link type is set, just in case. Otherwise select the first.
-        $enabledLinkTypes = array_values(ArrayHelper::where($this->getLinkTypes(), 'enabled'));
-        $defaultLinkTypeObject = ArrayHelper::where($enabledLinkTypes, 'handle', $this->defaultLinkType);
-
-        if (!$defaultLinkTypeObject) {
-            $this->defaultLinkType = $enabledLinkTypes[0]->handle ?? null;
-        }
-
-        $settings = [
-            'fieldId' => $this->id,
-            'handle' => $this->handle,
-            'defaultLinkType' => $this->defaultLinkType,
-            'defaultNewWindow' => $this->defaultNewWindow,
-            'newWindow' => $this->newWindow,
-            'multipleLinks' => $this->multipleLinks,
-            'minLinks' => $this->minLinks,
-            'maxLinks' => $this->maxLinks,
-            'namespacedName' => $view->namespaceInputName($this->handle),
-            'namespacedId' => $view->namespaceInputId($this->handle),
-            'isStatic' => $this->_isStatic,
-        ];
-
-        // Prepare the link types and HTML for fields
-        $placeholderKey = StringHelper::randomString(10);
-        $linkTypeInfo = $this->_getLinkTypeInfoForInput($element, $placeholderKey);
-        $settings['linkTypes'] = $linkTypeInfo['linkTypes'] ?? [];
-        $settings['js'] = $linkTypeInfo['js'] ?? [];
-        $settings['placeholderKey'] = $placeholderKey;
-
-        // Prepare the link element values for the field, including pre-rendered HTML
-        $value = $this->_getLinksForInput($value, $placeholderKey);
-
-        // Create the Hyper Input Vue component
-        $js = 'new Craft.Hyper.Input("' . $view->namespaceInputId($id) . '");';
-        $this->_registerJs($view, $js);
-
-        return $view->renderTemplate('hyper/field/input', [
-            'id' => $id,
-            'name' => $this->handle,
-            'field' => $this,
-            'element' => $element,
-            'value' => $value,
-            'settings' => $settings,
-        ]);
-    }
-
     public function normalizeValue(mixed $value, ElementInterface $element = null): mixed
     {
         if ($value instanceof LinkCollection) {
@@ -209,10 +158,6 @@ class HyperField extends Field
 
         if (is_string($value) && !empty($value)) {
             $value = Json::decodeIfJson($value);
-
-            if (is_array($value)) {
-                $value = self::_decodeStringValues($value);
-            }
         }
 
         if (!is_array($value)) {
@@ -227,7 +172,7 @@ class HyperField extends Field
         if ($value instanceof LinkCollection) {
             $value = $value->serializeValues($element);
 
-            return Json::decode(Json::encode(self::_encodeStringValues($value)));
+            return Json::decode(Json::encode($value));
         }
 
         return $value;
@@ -382,20 +327,6 @@ class HyperField extends Field
         }
     }
 
-    protected function searchKeywords(mixed $value, ElementInterface $element): string
-    {
-        $keywords = parent::searchKeywords($value, $element);
-
-        if ($value instanceof LinkCollection) {
-            $values = $value->serializeValues();
-            unset($values['type'], $values['handle'], $values['newWindow']);
-
-            $keywords = trim(self::_recursiveImplode($values, ' '));
-        }
-
-        return $keywords;
-    }
-
     public function getLinkTypes(): array
     {
         if ($this->_linkTypes) {
@@ -496,6 +427,71 @@ class HyperField extends Field
         $rules[] = ['linkTypes', 'validateLinkTypes'];
 
         return $rules;
+    }
+
+    protected function inputHtml(mixed $value, ?ElementInterface $element, bool $inline): string
+    {
+        $view = Craft::$app->getView();
+        $id = Html::id($this->handle);
+
+        // Ensure that a valid default link type is set, just in case. Otherwise select the first.
+        $enabledLinkTypes = array_values(ArrayHelper::where($this->getLinkTypes(), 'enabled'));
+        $defaultLinkTypeObject = ArrayHelper::where($enabledLinkTypes, 'handle', $this->defaultLinkType);
+
+        if (!$defaultLinkTypeObject) {
+            $this->defaultLinkType = $enabledLinkTypes[0]->handle ?? null;
+        }
+
+        $settings = [
+            'fieldId' => $this->id,
+            'handle' => $this->handle,
+            'defaultLinkType' => $this->defaultLinkType,
+            'defaultNewWindow' => $this->defaultNewWindow,
+            'newWindow' => $this->newWindow,
+            'multipleLinks' => $this->multipleLinks,
+            'minLinks' => $this->minLinks,
+            'maxLinks' => $this->maxLinks,
+            'namespacedName' => $view->namespaceInputName($this->handle),
+            'namespacedId' => $view->namespaceInputId($this->handle),
+            'isStatic' => $this->_isStatic,
+        ];
+
+        // Prepare the link types and HTML for fields
+        $placeholderKey = StringHelper::randomString(10);
+        $linkTypeInfo = $this->_getLinkTypeInfoForInput($element, $placeholderKey);
+        $settings['linkTypes'] = $linkTypeInfo['linkTypes'] ?? [];
+        $settings['js'] = $linkTypeInfo['js'] ?? [];
+        $settings['placeholderKey'] = $placeholderKey;
+
+        // Prepare the link element values for the field, including pre-rendered HTML
+        $value = $this->_getLinksForInput($value, $placeholderKey);
+
+        // Create the Hyper Input Vue component
+        $js = 'new Craft.Hyper.Input("' . $view->namespaceInputId($id) . '");';
+        $this->_registerJs($view, $js);
+
+        return $view->renderTemplate('hyper/field/input', [
+            'id' => $id,
+            'name' => $this->handle,
+            'field' => $this,
+            'element' => $element,
+            'value' => $value,
+            'settings' => $settings,
+        ]);
+    }
+
+    protected function searchKeywords(mixed $value, ElementInterface $element): string
+    {
+        $keywords = parent::searchKeywords($value, $element);
+
+        if ($value instanceof LinkCollection) {
+            $values = $value->serializeValues();
+            unset($values['type'], $values['handle'], $values['newWindow']);
+
+            $keywords = trim(self::_recursiveImplode($values, ' '));
+        }
+
+        return $keywords;
     }
 
 
@@ -604,7 +600,15 @@ class HyperField extends Field
             // because the form HTML is for JavaScript; not returned by inputHtml().
             return $view->namespaceInputs($form->render());
         } catch (Throwable $e) {
-            return Html::tag('div', Craft::t('hyper', 'Unable to render field - {e}.', ['e' => $e->getMessage()]), ['class' => 'error']);
+            $error = Craft::t('hyper', 'Unable to render field - {message} {file}:{line}', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            Hyper::error($error);
+
+            return Html::tag('div', $error, ['class' => 'error']);
         }
     }
 
@@ -764,35 +768,5 @@ class HyperField extends Field
         $trim_all && $glued_string = preg_replace("/(\s)/ixsm", '', $glued_string);
 
         return (string)$glued_string;
-    }
-
-    private static function _decodeStringValues(array $values)
-    {
-        foreach ($values as $key => $value) {
-            if (is_array($value)) {
-                $value = self::_decodeStringValues($value);
-            } else if (is_string($value)) {
-                $value = StringHelper::shortcodesToEmoji($value);
-            }
-
-            $values[$key] = $value;
-        }
-
-        return $values;
-    }
-
-    private static function _encodeStringValues(array $values)
-    {
-        foreach ($values as $key => $value) {
-            if (is_array($value)) {
-                $value = self::_encodeStringValues($value);
-            } else if (is_string($value)) {
-                $value = StringHelper::emojiToShortcodes($value);
-            }
-
-            $values[$key] = $value;
-        }
-
-        return $values;
     }
 }

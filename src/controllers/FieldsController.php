@@ -23,12 +23,11 @@ class FieldsController extends Controller
     public function actionLayoutDesigner(): Response
     {
         $view = Craft::$app->getView();
-        $request = Craft::$app->getRequest();
 
-        $fieldLayoutUid = $request->getParam('layoutUid');
-        $fieldIds = $request->getParam('fieldIds');
-        $type = $request->getParam('type');
-        $layoutConfig = $request->getParam('layout', []);
+        $fieldLayoutUid = $this->request->getParam('layoutUid');
+        $fieldIds = $this->request->getParam('fieldIds');
+        $type = $this->request->getParam('type');
+        $layoutConfig = $this->request->getParam('layout', []);
 
         $fieldLayout = $type::getDefaultFieldLayout();
 
@@ -136,10 +135,23 @@ class FieldsController extends Controller
 
     public function actionPreviewEmbed(): Response
     {
-        $link = new Embed();
-        $link->linkValue = $this->request->getParam('value');
-        $values = $link->getSerializedValues();
+        $url = $this->request->getParam('value');
+        $data = Embed::fetchEmbedData($url);
 
-        return $this->asJson($values['linkValue']);
+        if (isset($data['error'])) {
+            return $this->asFailure($data['error']);
+        }
+
+        $html = $data['code'] ?? '';
+        $preview = Embed::getPreviewHtml($html);
+
+        // Check for validation
+        $settings = Hyper::$plugin->getSettings();
+
+        if ($settings->embedAllowedDomains && !$settings->doesUrlMatchDomain($url)) {
+            return $this->asFailure(Craft::t('hyper', 'URL domain not allowed.'));
+        }
+
+        return $this->asSuccess(null, ['data' => $data, 'preview' => $preview]);
     }
 }
